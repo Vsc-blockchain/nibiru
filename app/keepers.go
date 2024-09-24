@@ -105,51 +105,47 @@ import (
 	// ---------------------------------------------------------------
 	// Nibiru Custom Modules
 
-	"github.com/NibiruChain/nibiru/eth"
-	"github.com/NibiruChain/nibiru/x/common"
-	"github.com/NibiruChain/nibiru/x/devgas/v1"
-	devgaskeeper "github.com/NibiruChain/nibiru/x/devgas/v1/keeper"
-	devgastypes "github.com/NibiruChain/nibiru/x/devgas/v1/types"
-	"github.com/NibiruChain/nibiru/x/epochs"
-	epochskeeper "github.com/NibiruChain/nibiru/x/epochs/keeper"
-	epochstypes "github.com/NibiruChain/nibiru/x/epochs/types"
-	"github.com/NibiruChain/nibiru/x/evm"
-	"github.com/NibiruChain/nibiru/x/evm/evmmodule"
-	evmkeeper "github.com/NibiruChain/nibiru/x/evm/keeper"
-	"github.com/NibiruChain/nibiru/x/genmsg"
-	"github.com/NibiruChain/nibiru/x/inflation"
-	inflationkeeper "github.com/NibiruChain/nibiru/x/inflation/keeper"
-	inflationtypes "github.com/NibiruChain/nibiru/x/inflation/types"
-	oracle "github.com/NibiruChain/nibiru/x/oracle"
-	oraclekeeper "github.com/NibiruChain/nibiru/x/oracle/keeper"
-	oracletypes "github.com/NibiruChain/nibiru/x/oracle/types"
+	"github.com/NibiruChain/nibiru/v2/app/keepers"
+	"github.com/NibiruChain/nibiru/v2/eth"
+	"github.com/NibiruChain/nibiru/v2/x/common"
+	"github.com/NibiruChain/nibiru/v2/x/devgas/v1"
+	devgaskeeper "github.com/NibiruChain/nibiru/v2/x/devgas/v1/keeper"
+	devgastypes "github.com/NibiruChain/nibiru/v2/x/devgas/v1/types"
+	"github.com/NibiruChain/nibiru/v2/x/epochs"
+	epochskeeper "github.com/NibiruChain/nibiru/v2/x/epochs/keeper"
+	epochstypes "github.com/NibiruChain/nibiru/v2/x/epochs/types"
+	"github.com/NibiruChain/nibiru/v2/x/evm"
+	"github.com/NibiruChain/nibiru/v2/x/evm/evmmodule"
+	evmkeeper "github.com/NibiruChain/nibiru/v2/x/evm/keeper"
+	"github.com/NibiruChain/nibiru/v2/x/genmsg"
+	"github.com/NibiruChain/nibiru/v2/x/inflation"
+	inflationkeeper "github.com/NibiruChain/nibiru/v2/x/inflation/keeper"
+	inflationtypes "github.com/NibiruChain/nibiru/v2/x/inflation/types"
+	oracle "github.com/NibiruChain/nibiru/v2/x/oracle"
+	oraclekeeper "github.com/NibiruChain/nibiru/v2/x/oracle/keeper"
+	oracletypes "github.com/NibiruChain/nibiru/v2/x/oracle/types"
 
-	"github.com/NibiruChain/nibiru/x/sudo"
-	"github.com/NibiruChain/nibiru/x/sudo/keeper"
-	sudotypes "github.com/NibiruChain/nibiru/x/sudo/types"
+	"github.com/NibiruChain/nibiru/v2/x/sudo"
+	"github.com/NibiruChain/nibiru/v2/x/sudo/keeper"
+	sudotypes "github.com/NibiruChain/nibiru/v2/x/sudo/types"
 
-	tokenfactory "github.com/NibiruChain/nibiru/x/tokenfactory"
-	tokenfactorykeeper "github.com/NibiruChain/nibiru/x/tokenfactory/keeper"
-	tokenfactorytypes "github.com/NibiruChain/nibiru/x/tokenfactory/types"
+	tokenfactory "github.com/NibiruChain/nibiru/v2/x/tokenfactory"
+	tokenfactorykeeper "github.com/NibiruChain/nibiru/v2/x/tokenfactory/keeper"
+	tokenfactorytypes "github.com/NibiruChain/nibiru/v2/x/tokenfactory/types"
 )
 
 type AppKeepers struct {
-	// AccountKeeper encodes/decodes accounts using the go-amino (binary) encoding/decoding library
-	AccountKeeper authkeeper.AccountKeeper
-	// BankKeeper defines a module interface that facilitates the transfer of coins between accounts
-	BankKeeper       bankkeeper.Keeper
+	keepers.PublicKeepers
+	privateKeepers
+}
+
+type privateKeepers struct {
 	capabilityKeeper *capabilitykeeper.Keeper
-	stakingKeeper    *stakingkeeper.Keeper
 	slashingKeeper   slashingkeeper.Keeper
-	/* DistrKeeper is the keeper of the distribution store */
-	DistrKeeper           distrkeeper.Keeper
-	GovKeeper             govkeeper.Keeper
-	crisisKeeper          crisiskeeper.Keeper
-	upgradeKeeper         upgradekeeper.Keeper
-	paramsKeeper          paramskeeper.Keeper
-	authzKeeper           authzkeeper.Keeper
-	FeeGrantKeeper        feegrantkeeper.Keeper
-	ConsensusParamsKeeper consensusparamkeeper.Keeper
+	crisisKeeper     crisiskeeper.Keeper
+	upgradeKeeper    upgradekeeper.Keeper
+	paramsKeeper     paramskeeper.Keeper
+	authzKeeper      authzkeeper.Keeper
 
 	// --------------------------------------------------------------------
 	// IBC keepers
@@ -167,31 +163,6 @@ type AppKeepers struct {
 	ibcTransferKeeper   ibctransferkeeper.Keeper
 	icaControllerKeeper icacontrollerkeeper.Keeper
 	icaHostKeeper       icahostkeeper.Keeper
-
-	// make scoped keepers public for test purposes
-	ScopedIBCKeeper           capabilitykeeper.ScopedKeeper
-	ScopedICAControllerKeeper capabilitykeeper.ScopedKeeper
-	ScopedICAHostKeeper       capabilitykeeper.ScopedKeeper
-	ScopedTransferKeeper      capabilitykeeper.ScopedKeeper
-
-	// make IBC modules public for test purposes
-	// these modules are never directly routed to by the IBC Router
-	FeeMockModule ibcmock.IBCModule
-
-	// ---------------
-	// Nibiru keepers
-	// ---------------
-	EpochsKeeper       epochskeeper.Keeper
-	OracleKeeper       oraclekeeper.Keeper
-	InflationKeeper    inflationkeeper.Keeper
-	SudoKeeper         keeper.Keeper
-	DevGasKeeper       devgaskeeper.Keeper
-	TokenFactoryKeeper tokenfactorykeeper.Keeper
-	EvmKeeper          evmkeeper.Keeper
-
-	// WASM keepers
-	WasmKeeper       wasmkeeper.Keeper
-	ScopedWasmKeeper capabilitykeeper.ScopedKeeper
 }
 
 func initStoreKeys() (
@@ -233,7 +204,7 @@ func initStoreKeys() (
 
 		evm.StoreKey,
 	)
-	tkeys = sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
+	tkeys = sdk.NewTransientStoreKeys(paramstypes.TStoreKey, evm.TransientKey)
 	memKeys = sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
 	return keys, tkeys, memKeys
 }
@@ -298,7 +269,7 @@ func (app *NibiruApp) InitKeepers(
 		BlockedAddresses(),
 		govModuleAddr,
 	)
-	app.stakingKeeper = stakingkeeper.NewKeeper(
+	app.StakingKeeper = stakingkeeper.NewKeeper(
 		appCodec,
 		keys[stakingtypes.StoreKey],
 		app.AccountKeeper,
@@ -310,7 +281,7 @@ func (app *NibiruApp) InitKeepers(
 		keys[distrtypes.StoreKey],
 		app.AccountKeeper,
 		app.BankKeeper,
-		app.stakingKeeper,
+		app.StakingKeeper,
 		authtypes.FeeCollectorName,
 		govModuleAddr,
 	)
@@ -350,11 +321,11 @@ func (app *NibiruApp) InitKeepers(
 		appCodec,
 		legacyAmino,
 		keys[slashingtypes.StoreKey],
-		app.stakingKeeper,
+		app.StakingKeeper,
 		govModuleAddr,
 	)
 
-	app.stakingKeeper.SetHooks(
+	app.StakingKeeper.SetHooks(
 		stakingtypes.NewMultiStakingHooks(app.DistrKeeper.Hooks(), app.slashingKeeper.Hooks()),
 	)
 
@@ -372,7 +343,7 @@ func (app *NibiruApp) InitKeepers(
 	)
 
 	app.OracleKeeper = oraclekeeper.NewKeeper(appCodec, keys[oracletypes.StoreKey],
-		app.AccountKeeper, app.BankKeeper, app.DistrKeeper, app.stakingKeeper, app.slashingKeeper,
+		app.AccountKeeper, app.BankKeeper, app.DistrKeeper, app.StakingKeeper, app.slashingKeeper,
 		app.SudoKeeper,
 		distrtypes.ModuleName,
 	)
@@ -383,7 +354,7 @@ func (app *NibiruApp) InitKeepers(
 
 	app.InflationKeeper = inflationkeeper.NewKeeper(
 		appCodec, keys[inflationtypes.StoreKey], app.GetSubspace(inflationtypes.ModuleName),
-		app.AccountKeeper, app.BankKeeper, app.DistrKeeper, app.stakingKeeper, app.SudoKeeper, authtypes.FeeCollectorName,
+		app.AccountKeeper, app.BankKeeper, app.DistrKeeper, app.StakingKeeper, app.SudoKeeper, authtypes.FeeCollectorName,
 	)
 
 	app.EpochsKeeper.SetHooks(
@@ -400,6 +371,8 @@ func (app *NibiruApp) InitKeepers(
 		authtypes.NewModuleAddress(govtypes.ModuleName),
 		app.AccountKeeper,
 		app.BankKeeper,
+		app.StakingKeeper,
+		cast.ToString(appOpts.Get("evm.tracer")),
 	)
 
 	// ---------------------------------- IBC keepers
@@ -408,7 +381,7 @@ func (app *NibiruApp) InitKeepers(
 		appCodec,
 		keys[ibcexported.StoreKey],
 		app.GetSubspace(ibcexported.ModuleName),
-		app.stakingKeeper,
+		app.StakingKeeper,
 		app.upgradeKeeper,
 		app.ScopedIBCKeeper,
 	)
@@ -479,7 +452,7 @@ func (app *NibiruApp) InitKeepers(
 		keys[wasmtypes.StoreKey],
 		app.AccountKeeper,
 		app.BankKeeper,
-		app.stakingKeeper,
+		app.StakingKeeper,
 		distrkeeper.NewQuerier(app.DistrKeeper),
 		app.ibcFeeKeeper, // ISC4 Wrapper: fee IBC middleware
 		app.ibcKeeper.ChannelKeeper,
@@ -520,7 +493,7 @@ func (app *NibiruApp) InitKeepers(
 	// Create evidence keeper.
 	// This keeper automatically includes an evidence router.
 	app.evidenceKeeper = *evidencekeeper.NewKeeper(
-		appCodec, keys[evidencetypes.StoreKey], app.stakingKeeper,
+		appCodec, keys[evidencetypes.StoreKey], app.StakingKeeper,
 		app.slashingKeeper,
 	)
 
@@ -560,11 +533,16 @@ func (app *NibiruApp) InitKeepers(
 	// channel.RecvPacket -> fee.OnRecvPacket -> icaHost.OnRecvPacket
 	icaHostStack := icahost.NewIBCModule(app.icaHostKeeper)
 
+	var wasmStack porttypes.IBCModule
+	wasmStack = wasm.NewIBCHandler(app.WasmKeeper, app.ibcKeeper.ChannelKeeper, app.ibcFeeKeeper)
+	wasmStack = ibcfee.NewIBCMiddleware(wasmStack, app.ibcFeeKeeper)
+
 	// Add transfer stack to IBC Router
 	ibcRouter.
 		AddRoute(icahosttypes.SubModuleName, icaHostStack).
 		AddRoute(icacontrollertypes.SubModuleName, icaControllerStack).
-		AddRoute(ibctransfertypes.ModuleName, transferStack)
+		AddRoute(ibctransfertypes.ModuleName, transferStack).
+		AddRoute(wasmtypes.ModuleName, wasmStack)
 
 	// Create Mock IBC Fee module stack for testing
 	// SendPacket, since it is originating from the application to core IBC:
@@ -599,7 +577,7 @@ func (app *NibiruApp) InitKeepers(
 		keys[govtypes.StoreKey],
 		app.AccountKeeper,
 		app.BankKeeper,
-		app.stakingKeeper,
+		app.StakingKeeper,
 		app.MsgServiceRouter(),
 		govConfig,
 		govModuleAddr,
@@ -622,7 +600,7 @@ func (app *NibiruApp) initAppModules(
 	return []module.AppModule{
 		// core modules
 		genutil.NewAppModule(
-			app.AccountKeeper, app.stakingKeeper, app.BaseApp.DeliverTx,
+			app.AccountKeeper, app.StakingKeeper, app.BaseApp.DeliverTx,
 			encodingConfig.TxConfig,
 		),
 		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
@@ -631,9 +609,9 @@ func (app *NibiruApp) initAppModules(
 		capability.NewAppModule(appCodec, *app.capabilityKeeper, false),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(govtypes.ModuleName)),
-		slashing.NewAppModule(appCodec, app.slashingKeeper, app.AccountKeeper, app.BankKeeper, app.stakingKeeper, app.GetSubspace(slashingtypes.ModuleName)),
-		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.stakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
-		staking.NewAppModule(appCodec, app.stakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
+		slashing.NewAppModule(appCodec, app.slashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(slashingtypes.ModuleName)),
+		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, app.GetSubspace(distrtypes.ModuleName)),
+		staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(stakingtypes.ModuleName)),
 		upgrade.NewAppModule(&app.upgradeKeeper),
 		params.NewAppModule(app.paramsKeeper),
 		authzmodule.NewAppModule(appCodec, app.authzKeeper, app.AccountKeeper, app.BankKeeper, app.interfaceRegistry),
@@ -641,7 +619,7 @@ func (app *NibiruApp) initAppModules(
 		// Nibiru modules
 		oracle.NewAppModule(appCodec, app.OracleKeeper, app.AccountKeeper, app.BankKeeper),
 		epochs.NewAppModule(appCodec, app.EpochsKeeper),
-		inflation.NewAppModule(app.InflationKeeper, app.AccountKeeper, *app.stakingKeeper),
+		inflation.NewAppModule(app.InflationKeeper, app.AccountKeeper, *app.StakingKeeper),
 		sudo.NewAppModule(appCodec, app.SudoKeeper),
 		genmsg.NewAppModule(app.MsgServiceRouter()),
 
@@ -656,7 +634,7 @@ func (app *NibiruApp) initAppModules(
 
 		// wasm
 		wasm.NewAppModule(
-			appCodec, &app.WasmKeeper, app.stakingKeeper, app.AccountKeeper,
+			appCodec, &app.WasmKeeper, app.StakingKeeper, app.AccountKeeper,
 			app.BankKeeper, app.MsgServiceRouter(),
 			app.GetSubspace(wasmtypes.ModuleName)),
 		devgas.NewAppModule(

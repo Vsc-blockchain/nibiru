@@ -2,17 +2,17 @@
 package keeper
 
 import (
-	"fmt"
-	"slices"
+	"math/big"
 
 	"github.com/NibiruChain/collections"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdkstore "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	gethcommon "github.com/ethereum/go-ethereum/common"
+	gethcore "github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/NibiruChain/nibiru/eth"
-	"github.com/NibiruChain/nibiru/x/evm"
+	"github.com/NibiruChain/nibiru/v2/eth"
+	"github.com/NibiruChain/nibiru/v2/x/evm"
 )
 
 type (
@@ -93,11 +93,6 @@ func NewEvmState(
 	}
 }
 
-// BytesToHex converts a byte array to a hexadecimal string
-func BytesToHex(bz []byte) string {
-	return fmt.Sprintf("%x", bz)
-}
-
 func (state EvmState) SetAccCode(ctx sdk.Context, codeHash, code []byte) {
 	if len(code) > 0 {
 		state.ContractBytecode.Insert(ctx, codeHash, code)
@@ -122,13 +117,12 @@ func (k Keeper) GetParams(ctx sdk.Context) (params evm.Params) {
 
 // SetParams: Setter for the module parameters.
 func (k Keeper) SetParams(ctx sdk.Context, params evm.Params) {
-	slices.Sort(params.ActivePrecompiles)
 	k.EvmState.ModuleParams.Set(ctx, params)
 }
 
-// SetState update contract storage, delete if value is empty.
+// SetState updates contract storage and deletes if the value is empty.
 func (state EvmState) SetAccState(
-	ctx sdk.Context, addr eth.EthAddr, stateKey eth.EthHash, stateValue []byte,
+	ctx sdk.Context, addr gethcommon.Address, stateKey gethcommon.Hash, stateValue []byte,
 ) {
 	if len(stateValue) != 0 {
 		state.AccState.Insert(ctx, collections.Join(addr, stateKey), stateValue)
@@ -138,10 +132,46 @@ func (state EvmState) SetAccState(
 }
 
 // GetState: Implements `statedb.Keeper` interface: Loads smart contract state.
-func (k *Keeper) GetState(ctx sdk.Context, addr eth.EthAddr, stateKey eth.EthHash) eth.EthHash {
+func (k *Keeper) GetState(ctx sdk.Context, addr gethcommon.Address, stateKey gethcommon.Hash) gethcommon.Hash {
 	return gethcommon.BytesToHash(k.EvmState.AccState.GetOr(
 		ctx,
 		collections.Join(addr, stateKey),
 		[]byte{},
 	))
+}
+
+// GetBlockBloomTransient returns bloom bytes for the current block height
+func (state EvmState) GetBlockBloomTransient(ctx sdk.Context) *big.Int {
+	bloomBz, err := state.BlockBloom.Get(ctx)
+	if err != nil {
+		return big.NewInt(0)
+	}
+	return new(big.Int).SetBytes(bloomBz)
+}
+
+func (state EvmState) CalcBloomFromLogs(
+	ctx sdk.Context, newLogs []*gethcore.Log,
+) (bloom gethcore.Bloom) {
+	if len(newLogs) > 0 {
+		bloomInt := state.GetBlockBloomTransient(ctx)
+		bloomInt.Or(bloomInt, big.NewInt(0).SetBytes(gethcore.LogsBloom(newLogs)))
+		bloom = gethcore.BytesToBloom(bloomInt.Bytes())
+	}
+	return bloom
+}
+
+// ResetTransientGasUsed resets gas to prepare for the next block of execution.
+// Called in an ante handler.
+func (k *Keeper) ResetTransientGasUsed(ctx sdk.Context) {
+	k.EvmState.BlockGasUsed.Set(ctx, 0)
+}
+
+// GetAccNonce returns the sequence number of an account, returns 0 if not exists.
+func (k Keeper) GetAccNonce(ctx sdk.Context, addr gethcommon.Address) uint64 {
+	nibiruAddr := sdk.AccAddress(addr.Bytes())
+	acct := k.accountKeeper.GetAccount(ctx, nibiruAddr)
+	if acct == nil {
+		return 0
+	}
+	return acct.GetSequence()
 }

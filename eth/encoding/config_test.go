@@ -8,14 +8,15 @@ import (
 
 	gethcore "github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/NibiruChain/nibiru/app"
-	"github.com/NibiruChain/nibiru/eth/encoding"
-	"github.com/NibiruChain/nibiru/x/evm"
-	"github.com/NibiruChain/nibiru/x/evm/evmtest"
+	"github.com/NibiruChain/nibiru/v2/app"
+	"github.com/NibiruChain/nibiru/v2/eth/encoding"
+	"github.com/NibiruChain/nibiru/v2/x/evm"
+	"github.com/NibiruChain/nibiru/v2/x/evm/evmtest"
 )
 
 func TestTxEncoding(t *testing.T) {
-	addr, key := evmtest.PrivKeyEth()
+	ethAcc := evmtest.NewEthPrivAcc()
+	addr, key := ethAcc.EthAddr, ethAcc.PrivKey
 	signer := evmtest.NewSigner(key)
 
 	ethTxParams := evm.EvmTxArgs{

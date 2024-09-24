@@ -6,56 +6,54 @@ import (
 	"testing"
 
 	cmt "github.com/cometbft/cometbft/types"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/stretchr/testify/assert"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/NibiruChain/nibiru/eth/crypto/ethsecp256k1"
+	"github.com/NibiruChain/nibiru/v2/eth/crypto/ethsecp256k1"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	gethcommon "github.com/ethereum/go-ethereum/common"
 	gethcore "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/NibiruChain/nibiru/app"
-	"github.com/NibiruChain/nibiru/eth"
-	"github.com/NibiruChain/nibiru/x/evm"
+	"github.com/NibiruChain/nibiru/v2/app"
+	"github.com/NibiruChain/nibiru/v2/eth"
+	"github.com/NibiruChain/nibiru/v2/x/evm"
 )
 
-// NewEthAddr generates an Ethereum address.
-func NewEthAddr() gethcommon.Address {
-	ethAddr, _ := PrivKeyEth()
-	return ethAddr
-}
-
-func NewEthAddrNibiruPair() (
-	ethAddr gethcommon.Address,
-	privKey *ethsecp256k1.PrivKey,
-	nibiruAddr sdk.AccAddress,
-) {
-	ethAddr, privKey = PrivKeyEth()
-	return ethAddr, privKey, EthPrivKeyToNibiruAddr(ethAddr)
-}
-
-func EthPrivKeyToNibiruAddr(ethAddr gethcommon.Address) sdk.AccAddress {
-	return sdk.AccAddress(ethAddr.Bytes())
-}
-
-// PrivKeyEth returns an Ethereum private key and corresponding Eth address.
-func PrivKeyEth() (gethcommon.Address, *ethsecp256k1.PrivKey) {
+// NewEthPrivAcc returns an Ethereum private key, its corresponding Eth address, Nibiru address, and keyring signer.
+func NewEthPrivAcc() EthPrivKeyAcc {
 	privkey, _ := ethsecp256k1.GenerateKey()
 	privKeyE, _ := privkey.ToECDSA()
 	ethAddr := crypto.PubkeyToAddress(privKeyE.PublicKey)
-	return ethAddr, privkey
+	return EthPrivKeyAcc{
+		EthAddr:       ethAddr,
+		NibiruAddr:    eth.EthAddrToNibiruAddr(ethAddr),
+		PrivKey:       privkey,
+		KeyringSigner: NewSigner(privkey),
+	}
 }
 
-// NewEthTxMsg: Helper that returns a valid instance of [*evm.MsgEthereumTx].
-func NewEthTxMsg() *evm.MsgEthereumTx {
-	return NewEthTxMsgs(1)[0]
+// NewEthPrivAccs calls [NewEthAccInfo] n times.
+func NewEthPrivAccs(n int) []EthPrivKeyAcc {
+	infos := make([]EthPrivKeyAcc, n)
+	for idx := 0; idx < n; idx++ {
+		infos[idx] = NewEthPrivAcc()
+	}
+	return infos
+}
+
+type EthPrivKeyAcc struct {
+	EthAddr       gethcommon.Address
+	NibiruAddr    sdk.AccAddress
+	PrivKey       *ethsecp256k1.PrivKey
+	KeyringSigner keyring.Signer
 }
 
 func NewEthTxMsgs(count uint64) (ethTxMsgs []*evm.MsgEthereumTx) {
-	ethAddr := NewEthAddr()
+	ethAddr := NewEthPrivAcc().EthAddr
 	startIdx := uint64(1)
 	for nonce := startIdx; nonce-startIdx < count; nonce++ {
 		ethTxMsgs = append(ethTxMsgs, evm.NewTx(&evm.EvmTxArgs{

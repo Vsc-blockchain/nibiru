@@ -4,12 +4,23 @@ package evm
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 // AccountKeeper defines the expected account keeper interface
 type AccountKeeper interface {
 	NewAccountWithAddress(ctx sdk.Context, addr sdk.AccAddress) authtypes.AccountI
+
+	// GetModuleAccount gets the module account from the auth account store, if the
+	// account does not exist in the AccountKeeper, then it is created. This
+	// differs from the "GetModuleAddress" function, which performs a pure
+	// computation.
+	GetModuleAccount(ctx sdk.Context, moduleName string) authtypes.ModuleAccountI
+
+	// GetModuleAddress returns an address based on the module name, however it
+	// does not modify state at all. To create initialize the module account,
+	// instead use "GetModuleAccount".
 	GetModuleAddress(moduleName string) sdk.AccAddress
 	GetAllAccounts(ctx sdk.Context) (accounts []authtypes.AccountI)
 	IterateAccounts(ctx sdk.Context, cb func(account authtypes.AccountI) bool)
@@ -18,6 +29,7 @@ type AccountKeeper interface {
 	SetAccount(ctx sdk.Context, account authtypes.AccountI)
 	RemoveAccount(ctx sdk.Context, account authtypes.AccountI)
 	GetParams(ctx sdk.Context) (params authtypes.Params)
+	SetModuleAccount(ctx sdk.Context, macc authtypes.ModuleAccountI)
 }
 
 // BankKeeper defines the expected interface needed to retrieve account balances.
@@ -27,6 +39,9 @@ type BankKeeper interface {
 	SendCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	MintCoins(ctx sdk.Context, moduleName string, amt sdk.Coins) error
 	BurnCoins(ctx sdk.Context, moduleName string, amt sdk.Coins) error
+
+	GetDenomMetaData(ctx sdk.Context, denom string) (metadata bank.Metadata, isFound bool)
+	SetDenomMetaData(ctx sdk.Context, denomMetaData bank.Metadata)
 }
 
 // StakingKeeper returns the historical headers kept in store.
